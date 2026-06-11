@@ -701,60 +701,69 @@ async def canceljob_command(update, context):
         await update.message.reply_text("Khong tim thay job [%s]." % sub_id)
 
 
-# ── Shop Lists cố định (Option B) ────────────────────────────────────────────
+# — Shop Lists cố định (Option B) ——————————————————————————————
 SHOP_LISTS = {
     "list1": {
         "title": "VÀI BRAND ĐỒ SIÊU XINH MÀ MÌNH MÊ 🎀",
         "shops": [
-            ("🌸 Tiin", "https://s.shopee.vn/AUr26IFUZf", "Trendy từng ngày, từ công sở đến cuối tuần-mặc lên là có điểm nhấn liền ✨"),
-            ("🌸 Veos", "https://s.shopee.vn/9Kf4i9JvwS", "Sơ mi điệu đà, item nữ tính dịu dàng-mặc lên thấy nhẹ nhàng và tinh tế ngay 🎀"),
-            ("🌸 Seo", "https://s.shopee.vn/9UyUuSJIbV", "Dễ phối, trẻ trung, hiện đại-style đơn giản mà vẫn đủ cuốn 🩶"),
-            ("🌸 Zamy", "https://s.shopee.vn/9fHv6IIfGY", "Váy áo bay bồng, form tôn dáng-chuẩn vibe nàng thơ không cần cố 🌸"),
+            ("🌺 Tiin", "https://s.shopee.vn/AUr26IFUZf", "Trendy từng ngày, từ công sở đến cuối tuần-mặc lên là có điểm nhấn liền ✨"),
+            ("🌺 Veos", "https://s.shopee.vn/9Kf4i9JvwS", "Sơ mi điệu đà, item nữ tính dịu dàng-mặc lên thấy nhẹ nhàng và tinh tế ngay 🎀"),
+            ("🌺 Seo", "https://s.shopee.vn/9UyUuSJIbV", "Dễ phối, trẻ trung, hiện đại-style đơn giản mà vẫn đủ cuốn 🤍"),
+            ("🌺 Zamy", "https://s.shopee.vn/8KmgV84GJc", "Váy áo bay bổng, form tôn dáng-chuẩn vibe nàng thơ không cần cố 🌸"),
         ]
     },
     "list2": {
         "title": "NHỮNG BRAND ĐỒ HÈ SIÊU XINH MÀ NÀNG KHÔNG NÊN BỎ QUA 🎀",
         "shops": [
-            ("🌸 La.na Design", "https://s.shopee.vn/9pbLJ4I1vb", "Chất liệu chọn lọc, dáng nữ tính dịu dàng-mặc lên là tinh tế liền 🌺"),
-            ("🌸 Khoai Boutique", "https://s.shopee.vn/8fPNuvMTIO", "Mẫu mới liên tục, set nào cũng nhẹ nhàng trendy-nhìn phát là muốn chốt ngay 🌿"),
-            ("🌸 KIDO", "https://s.shopee.vn/8pio7ELpxR", "Từ cafe hẹn hò đến đi biển du lịch-item nào cũng xinh và dễ mặc 🎀"),
-            ("🌸 PT CLOSET", "https://s.shopee.vn/902EJXLCcU", "Bánh bèo hay cá tính đều có-shop 5⭐ xứng đáng thử một lần 🌈"),
-            ("🌸 LaNang Store", "https://s.shopee.vn/9ALeVqKZHX", "Đầm và set đủ kiểu, đánh giá cao-đi tiệc hay đi chơi đều không lo thiếu outfit 👗"),
-            ("🌸 JULYY", "https://s.shopee.vn/809h7hP0eK", "Dễ phối từ sáng đến tối, đi chơi đi làm hay ở nhà-nàng nào cũng cần một shop như này 🌺"),
+            ("🌺 La.na Design", "https://s.shopee.vn/9pbLJ4I1vb", "Chất liệu chọn lọc, dáng nữ tính dịu dàng-mặc lên là tinh tế liền 🪷"),
+            ("🌺 Khoai Boutique", "https://s.shopee.vn/8fPNuvMTIO", "Mẫu mới liên tục, set nào cũng nhẹ nhàng trendy-nhìn phát là muốn chốt ngay 💫"),
+            ("🌺 KIDO", "https://s.shopee.vn/8pio7ELpxR", "Từ cafe hẹn hò đến đi biển du lịch-item nào cũng xinh và dễ mặc 🌴"),
+            ("🌺 PT CLOSET", "https://s.shopee.vn/902EJXLCcU", "Bánh bèo hay cá tính đều có-shop 5⭐️ xứng đáng thử một lần 🌈"),
+            ("🌺 JULYY", "https://s.shopee.vn/809h7hP0eK", "Dễ phối từ sáng đến tối, đi chơi đi làm hay ở nhà-nàng nào cũng cần một shop như này 🍬"),
         ]
     },
     "list3": {
         "title": "VÀI BRAND ĐỒ BIỂN & RESORT KHOE DÁNG CHO MẤY NÀNG NÈ 🌊🔥",
         "shops": [
-            ("🌸 Maikaa Studio", "https://s.shopee.vn/8AT7K0ONjN", "Form tôn dáng, nữ tính-mặc đi biển hay dạo phố đều xinh như nhau 🌊"),
-            ("🌸 HAN'S STORE", "https://s.shopee.vn/8KmXWJNjyQ", "Đường may chắc, cắt xẻ tinh tế-bikini này khoe dáng là hút mắt ngay 💙"),
-            ("🌸 Dune Swimwear Label", "https://s.shopee.vn/8V5xicN6dT", "Họa tiết dịu nhẹ, sang chảnh-chuẩn vibe nghỉ dưỡng resort 🐚"),
-            ("🌸 Beach Club", "https://s.shopee.vn/7Ku0KTRY0G", "Set đồ biển đa dạng, dễ mix-mùa hè này không lo hết ý tưởng 🧡"),
-            ("🌸 TWENTI", "https://s.shopee.vn/7VDQWmQufJ", "Micro short + bikini họa tiết nổi-combo trendy cho nàng cá tính 🌺"),
-            ("🌸 Dins Swimwear", "https://s.shopee.vn/7fWqj5QHKM", "Nâng dáng tự nhiên, chất liệu cao cấp-mặc lên là tự tin không cần chỉnh ảnh 🔥"),
-            ("🌸 Selflove Club", "https://s.shopee.vn/7pqGvOPdzP", "Bikini 2 mặt đổi style cực nhanh, chất vải xịn-thoải mái từ sáng đến tối 🌸"),
-            ("🌸 SeaArea", "https://s.shopee.vn/6feJXFU5MC", "Họa tiết mermaid nhiệt đới độc lạ-ra biển là nổi bật không cần cố 🧜"),
+            ("🌺 Maikaa Studio", "https://s.shopee.vn/8AT7K0ONJN", "Form tôn dáng, nữ tính-mặc đi biển hay dạo phố đều xinh như nhau 🌊"),
+            ("🌺 HAN'S STORE", "https://s.shopee.vn/8KmXWJNjyQ", "Đường may chắc, cắt xẻ tinh tế-bikini này khoe dáng là hút mắt ngay 💎"),
+            ("🌺 Dune Swimwear Label", "https://s.shopee.vn/8V5xicN6dT", "Họa tiết dịu nhẹ, sang chảnh-chuẩn vibe nghỉ dưỡng resort 🐚"),
+            ("🌺 Beach Club", "https://s.shopee.vn/7Ku0KTRY0G", "Set đồ biển đa dạng, dễ mix-mùa hè này không lo hết ý tưởng ☀️"),
+            ("🌺 TWENTI", "https://s.shopee.vn/7VDQWmQufJ", "Micro short + bikini họa tiết nổi-combo trendy cho nàng cá tính 🫧"),
+            ("🌺 Dins Swimwear", "https://s.shopee.vn/7fWqj5QHKM", "Nâng dáng tự nhiên, chất liệu cao cấp-mặc lên là tự tin không cần chỉnh ảnh 🔥"),
+            ("🌺 Selflove Club", "https://s.shopee.vn/7pqGvOPdzP", "Bikini 2 mặt đổi style cực nhanh, chất vải xịn-thoải mái từ sáng đến tối 🌺"),
+            ("🌺 SeaArea", "https://s.shopee.vn/6feJXFU5MC", "Họa tiết mermaid nhiệt đới độc lạ-ra biển là nổi bật không cần cố 🧜‍♀️"),
         ]
     },
     "list4": {
-        "title": "LƯU NGAY LIST BRAND ĐỒ ĐI BIỂN \"VẠN NGƯỜI MÊ\" ✨",
+        "title": 'LƯU NGAY LIST BRAND ĐỒ ĐI BIỂN "VẠN NGƯỜI MÊ" ✨',
         "shops": [
-            ("🌸 Cutenew Official Store", "https://s.shopee.vn/6pxjjYTS1F", "Màu sắc kẹo ngọt, thiết kế vừa cute vừa gợi cảm-bikini và đồ biển ở đây giúp nàng bừng sáng mọi khung hình dưới nắng hè 🌺"),
-            ("🌸 Maikaa Studio", "https://s.shopee.vn/70H9vrSogI", "Váy lụa, maxi cut-out, chiffon nhẹ thoáng-Maikaa Studio chuyên outfit đi biển vừa tôn dáng vừa mềm mại chuẩn vibe nàng thơ 🌸"),
-            ("🌸 Pet by Chang", "https://s.shopee.vn/7Aaa8ASBLL", "Đầm maxi họa tiết rực, cắt xẻ táo bao, vải bay bồng trước gió-chốt đơn một bộ là đủ ảnh triệu like cả chuyến 🎬"),
-            ("🌸 MINH KHUE STUDIO", "https://s.shopee.vn/60Ock1Wci8", "Váy maxi, đầm hai dây, set bay bồng-MINH KHUE STUDIO mang vibe nữ tính quyến rũ chuẩn cho những bộ ảnh hè đẹp nhất của nàng 🌺"),
-            ("🌸 YNN STUDIO", "https://s.shopee.vn/6Ai2wKVzNB", "Maxi và đầm hở lưng vải tơ voan xòe nhẹ, bảng màu sang trọng-tôn dáng cực chuẩn cho ảnh resort hay dạo bước bên biển 🌊"),
-            ("🌸 BeachClub", "https://s.shopee.vn/6L1T8dVM2E", "Bikini, váy maxi, crop top, jumpsuit-BeachClub chuẩn bị sẵn mọi outfit vacation ready cho nàng, khoét lưng hay trẻ vai đều có đủ 🌊"),
+            ("🌺 Cutenew Official Store", "https://s.shopee.vn/6pxjjYTS1F", "Màu sắc kẹo ngọt, thiết kế vừa cute vừa gợi cảm-bikini và đồ biển ở đây giúp nàng bừng sáng mọi khung hình dưới nắng hè 🍭"),
+            ("🌺 Maikaa Studio", "https://s.shopee.vn/70H9vrSogI", "Váy lụa, maxi cut-out, chiffon nhẹ thoáng-Maikaa Studio chuyên outfit đi biển vừa tôn dáng vừa mềm mại chuẩn vibe nàng thơ 🌸"),
+            ("🌺 Pet by Chang", "https://s.shopee.vn/7Aaa8ASBLL", "Đầm maxi họa tiết rực, cắt xẻ táo bạo, vải bay bổng trước gió-chốt đơn một bộ là đủ ảnh triệu like cả chuyến 📸"),
+            ("🌺 MINH KHUE STUDIO", "https://s.shopee.vn/60Ock1Wci8", "Váy maxi, đầm hai dây, set bay bổng-MINH KHUE STUDIO mang vibe nữ tính quyến rũ chuẩn cho những bộ ảnh hè đẹp nhất của nàng 🌺"),
+            ("🌺 YNN STUDIO", "https://s.shopee.vn/6Ai2wKVzNB", "Maxi và đầm hở lưng vải tơ voan xòe nhẹ, bảng màu sang trọng-tôn dáng cực chuẩn cho ảnh resort hay dạo bước bên biển 🪷"),
+            ("🌺 BeachClub", "https://s.shopee.vn/6L1T8dVM2E", "Bikini, váy maxi, crop top, jumpsuit-BeachClub chuẩn bị sẵn mọi outfit vacation ready cho nàng, khoét lưng hay trễ vai đều có đủ 🏖️"),
         ]
     },
     "list5": {
-        "title": "Nàng nào mê style Hàn nhẹ nhàng là auto đồ liền 🩶",
+        "title": "NHỮNG BRAND STYLE TỐI GIẢN MÀ ĐẬM CHẤT RIÊNG ✨",
         "shops": [
-            ("🌸 Adelia Shop", "https://s.shopee.vn/W3lNvaNr0", "Style Hàn tiểu thư, mẫu mã cực đa dạng, hình thật y chang hình shop—chốt đơn không lo risk 🎀"),
-            ("🌸 Denim", "https://s.shopee.vn/LkLBcb1Bz", "Bánh bèo tiểu thư tìm đúng chỗ rồi nha, áo kiểu set váy áo khoác vibe đẹp—diện Tết là chuẩn bài luôn ✨"),
-            ("🌸 DIELIAN", "https://s.shopee.vn/qgbmXZ7B6", "Kiểu dáng đa dạng trẻ trung, đặc biệt nhiều áo khoác siêu mê—vào xem là khó ra tay không mua lắm 🌸"),
-            ("🌸 JSC", "https://s.shopee.vn/gNBaEZkW5", "Gần 20k sản phẩm từ áo kiểu, chân váy đến quần-đặc biệt áo len kiểu đẹp xịu, nàng nào thích mix đồ là mê ngay 🌿"),
-            ("🌸 Guimi", "https://s.shopee.vn/1BJSB9XqVC", "Một trong số ít shop nội địa Trung đáng tin, đồ thu đông cập nhật liên tục—áo kiểu áo len lên kệ hoài, tha hồ lựa 🍃"),
+            ("🌺 TWENTI", "https://s.shopee.vn/5q5icUm4v5", "Form rộng casual street, mix đâu cũng ổn mà nhìn vẫn ra chất 🖤"),
+            ("🌺 WEIRD PUSS", "https://s.shopee.vn/60P8onlRa8", "Croptop mesh form ôm vibe Y2K Âu Mỹ-mặc vào là outfit có độ cháy liền 🔥"),
+            ("🌺 ÉMILIE", "https://s.shopee.vn/6AiZ16koFB", "Vải nhẹ form rủ, càng nhìn càng thấy xinh-mặc vào vibe mềm mại ngay 🌸"),
+            ("🌺 LSOUL", "https://s.shopee.vn/6L1zDPkAuE", "Corset váy statement tôn dáng chuẩn sexy chic-hyper-feminine hiện đại cực đỉnh 💗"),
+            ("🌺 CRISPUS", "https://s.shopee.vn/6VLPPijXZH", "Hôm nay bánh bèo mai cool ngầu, vải mềm hay street đều có-mix đủ mood không bao giờ chán 🌟"),
+        ]
+    },
+    "list6": {
+        "title": "TOP THƯƠNG HIỆU VÁY ĐẦM NHẸ NHÀNG SANG TRỌNG 🌿",
+        "shops": [
+            ("🌺 Meicy Studio", "https://s.shopee.vn/60P8uHbh5e", "Đường kim mũi chỉ tỉ mỉ, tôn da tôn dáng-cầm trên tay mới biết đỉnh ntn 🌿"),
+            ("🌺 Tiệm nhà mây", "https://s.shopee.vn/6AiZ6ab3kh", "Đẹp như hàng tiền triệu mà giá không phải, vải nhẹ xinh xỉu-mở ra là mê ngay 🌙"),
+            ("🌺 MMUSE STORE", "https://s.shopee.vn/5fmIVfcxlc", "Váy body giá nửa brand mà form lên dáng y chang ảnh mẫu-ưng không chỗ chê 💎"),
+            ("🌺 XIPI Official Store", "https://s.shopee.vn/5q5ihycKQf", "Nhẹ nhàng sang xịn như công chúa, nhiều mẫu nữ tính-mặc lên là muốn giữ hết 👑"),
+            ("🌺 Ciri Clothes", "https://s.shopee.vn/5L9S73eERa", "Đồ hè set nào cũng xinh yêu, lên kệ là các nàng mê-ghé lựa là không về tay không 🌸"),
         ]
     },
 }
@@ -763,7 +772,7 @@ def build_shop_list_caption(list_key):
     """Tao phan caption shop list tu SHOP_LISTS."""
     data = SHOP_LISTS.get(list_key)
     if not data:
-        return None, "List \"%s\" khong ton tai! Dung list1/list2/list3/list4/list5" % list_key
+        return None, "List \"%s\" khong ton tai! Dung list1/list2/list3/list4/list5/list6" % list_key
     lines = []
     lines.append("-----------")
     lines.append(data["title"])
