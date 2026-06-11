@@ -8,15 +8,9 @@ import logging
 import re
 import os
 import json
-import random
-import unicodedata
-import urllib.request
-import urllib.error
-from html.parser import HTMLParser
 from datetime import datetime, timezone, timedelta
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters as tg_filters
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -55,73 +49,6 @@ def detect_type(url):
         return "Xiaohongshu"
     return "Khac"
 
-# ── Title parser ──────────────────────────────────────────────────────────────
-class TitleParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self._in_title = False
-        self.title = ""
-
-    def handle_starttag(self, tag, attrs):
-        if tag.lower() == "title":
-            self._in_title = True
-
-    def handle_endtag(self, tag):
-        if tag.lower() == "title":
-            self._in_title = False
-
-    def handle_data(self, data):
-        if self._in_title:
-            self.title += data
-
-
-def fetch_title(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8",
-        "Accept-Encoding": "identity",
-    }
-    try:
-        opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
-        req = urllib.request.Request(url, headers=headers)
-        with opener.open(req, timeout=10) as resp:
-            raw = resp.read(65536)
-            charset = resp.headers.get_content_charset() or "utf-8"
-            html = raw.decode(charset, errors="replace")
-
-        # Thử <title>
-        parser = TitleParser()
-        parser.feed(html)
-        title = parser.title.strip()
-
-        # Thử og:title nếu title rỗng
-        if not title or title.lower().startswith("shopee"):
-            m = re.search(r'property="og:title"\s+content="([^"]+)"', html)
-            if not m:
-                m = re.search(r'content="([^"]+)"\s+property="og:title"', html)
-            if m:
-                title = m.group(1).strip()
-
-        # Cắt "| Shopee" cuối
-        title = re.split(r"\s*\|\s*[Ss]hopee", title)[0].strip()
-        title = re.split(r"\s*-\s*[Ss]hopee", title)[0].strip()
-        logger.info("Title: %r", title)
-        return title
-    except Exception as e:
-        logger.warning("fetch_title loi: %s", e)
-        return ""
-
-
-def to_sub_id(title):
-    nfkd = unicodedata.normalize("NFKD", title)
-    ascii_str = nfkd.encode("ascii", "ignore").decode("ascii")
-    slug = re.sub(r"[^a-zA-Z0-9]", "", ascii_str).lower()
-    slug = slug[:20]
-    rand = random.randint(100, 999)
-    return "%s%d" % (slug, rand)
-
-
 # ── Google Sheets ─────────────────────────────────────────────────────────────
 def get_sheet(retries=3):
     for attempt in range(retries):
@@ -154,7 +81,9 @@ def get_next_stt(sheet):
 async def start(update, context):
     await update.message.reply_text(
         "Bot luu link\n\n"
-        "/link <url> - Luu link, tu tao sub_id\n"
+        "/link <url> - Luu link\n"
+        "/custom - Cap nhat link tu CSV\n"
+        "/caption <sub_id> <list> - Tao caption\n"
         "/recent - 5 link moi nhat\n"
         "/count - Tong so link\n"
         "/help - Huong dan"
@@ -338,166 +267,7 @@ async def custom_command(update, context):
 
 
 # ── /hook: viết hook caption bằng Gemini API → lưu vào cột Hook ─────────────
-CLAUDE_SYSTEM_PROMPT = """Bạn là chuyên gia viết caption thời trang affiliate Shopee/Facebook tiếng Việt phong cách GenZ.
 
-NHIỆM VỤ: Nhìn ảnh outfit → viết ĐÚNG 2 CÂU hook tiếng Việt.
-
-PHONG CÁCH VIẾT:
-- Tự nhiên, gần gũi như đang nói chuyện với bạn bè
-- Có thể hài hước, relatable hoặc ngưỡng mộ tùy outfit
-- KHÔNG dùng ngôn ngữ quảng cáo cứng nhắc ("sản phẩm chất lượng cao", "giá tốt nhất")
-- KHÔNG dùng lỗi đánh máy cố ý
-
-CẤU TRÚC BẮT BUỘC:
-- Câu 1: hook gợi cảm xúc hoặc tình huống hài hước/relatable
-- Câu 2: câu kết ngắn + từ GenZ ("nha", "vậy nè", "á", "chứ", "luôn á")
-- PHẢI đủ 2 câu, không được viết 1 câu
-- Dùng 3-5 emoji GenZ cuối câu: 🌸 ✨ 🤍 🩵 🎀 🪷 🌼 🤎 🩰 ☕ 🌊 🕶️ 💫 🫶
-
-PHÂN LOẠI OUTFIT → GIỌNG:
-- Đầm/váy hoa nhí, cardigan nhẹ → tiểu thư, dreamy, nhẹ nhàng
-- Set đi cafe, phố → chill, hài hước nhẹ
-- Đầm đi biển, resort → dreamy, gợi travel
-- Đầm dạ tiệc/sang → tự tin, chanh sả
-- Casual/streetwear → relatable, gần gũi
-- Tutu/cute/kawaii → dễ thương, tiểu thư
-
-VÍ DỤ CHUẨN:
-✅ "Tiểu thư vườn hoa xuất hiện 🌸 Set này mà diện đi cafe cuối tuần thì ai cũng ngoái nhìn nha ✨🤍"
-✅ "Outfit đi biển mà nhìn như đi dự tiệc hoàng gia vậy nè 🩵 Ai nói đi biển không cần mặc đẹp thì sai rồi nha ✨🌊"
-✅ "Aesthetic nâu đất này đang sống rent-free trong đầu mình 🤎 Chanh sả không cần cố mà vẫn đỉnh vậy á ✨"
-✅ "Tiểu thư check-in khách sạn thì phải diện thế này mới đúng vibe chứ 🩵🩰 Cute xỉu không chịu được luôn á 🎀"
-✅ "Đi cafe cuối tuần mà diện cái này thì anh barista rót nhầm ly là đúng rồi nha 🪷☕ Thôi cứ mặc đẹp đã tính sau 🫶"
-✅ "Nắng vàng gặp set vàng - tự nhiên thấy cả ngày đẹp hơn hẳn 🌼 Mặc đi chơi mà cứ ngỡ đi runway nha 🕶️✨"
-
-CHỈ trả về DUY NHẤT 2 câu hook. Không giải thích gì thêm, không 'Link mua', không hashtag."""
-
-async def _process_single_hook(context, file_id, mime_hint, sub_id):
-    """Xu ly 1 anh: goi Claude API, luu vao sheet, tra ve hook."""
-    import base64
-    import urllib.request as urlreq
-    import json as jsonlib
-
-    try:
-        claude_key = os.environ["ANTHROPIC_API_KEY"]
-    except KeyError:
-        import config as cfg
-        claude_key = cfg.ANTHROPIC_API_KEY
-
-    tg_file = await context.bot.get_file(file_id)
-    img_bytes = await tg_file.download_as_bytearray()
-    img_b64 = base64.b64encode(bytes(img_bytes)).decode("utf-8")
-
-    # Detect mime
-    if bytes(img_bytes[:8]) == b'\x89PNG\r\n\x1a\n':
-        mime = "image/png"
-    elif bytes(img_bytes[:3]) == b'\xff\xd8\xff':
-        mime = "image/jpeg"
-    elif bytes(img_bytes[:4]) == b'RIFF' and bytes(img_bytes[8:12]) == b'WEBP':
-        mime = "image/webp"
-    else:
-        mime = mime_hint or "image/jpeg"
-
-    payload = jsonlib.dumps({
-        "model": "claude-sonnet-4-5",
-        "max_tokens": 200,
-        "system": CLAUDE_SYSTEM_PROMPT,
-        "messages": [{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": mime, "data": img_b64}},
-                {"type": "text", "text": "Viet hook caption cho outfit trong anh nay."}
-            ]
-        }]
-    }).encode("utf-8")
-
-    req = urlreq.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": claude_key,
-            "anthropic-version": "2023-06-01",
-        },
-        method="POST"
-    )
-
-    try:
-        with urlreq.urlopen(req, timeout=30) as resp:
-            result = jsonlib.loads(resp.read())
-            hook = result["content"][0]["text"].strip()
-    except urllib.error.HTTPError as http_err:
-        err_body = http_err.read().decode("utf-8", errors="replace")
-        raise Exception("HTTP %d: %s" % (http_err.code, err_body))
-
-    # Luu vao sheet newpost col C
-    sheet = get_newpost_sheet()
-    all_rows = sheet.get_all_values()
-    row_idx = None
-    for i, row in enumerate(all_rows[1:], start=2):
-        if row and row[0].strip() == sub_id:
-            row_idx = i
-            break
-    if row_idx:
-        sheet.update_cell(row_idx, 3, hook)
-        return hook, True
-    return hook, False
-
-
-async def hook_command(update, context):
-    message = update.message
-    files = []  # list of (file_id, mime_hint, sub_id)
-
-    if message.document and message.document.mime_type and message.document.mime_type.startswith("image/"):
-        doc = message.document
-        filename = doc.file_name or ""
-        sub_id = re.sub(r"\.[^.]+$", "", filename).strip()
-        if not sub_id and context.args:
-            sub_id = context.args[0].strip()
-        if not sub_id:
-            await message.reply_text(
-                "Khong doc duoc sub_id!\n\n"
-                "Doi ten file = sub_id (vi du: aocoyem3.jpg) hoac them /hook <sub_id>"
-            )
-            return
-        files.append((doc.file_id, doc.mime_type, sub_id))
-
-    elif message.photo:
-        if not context.args:
-            await message.reply_text(
-                "Voi anh thuong can ghi sub_id: /hook <sub_id>\n\n"
-                "Hoac gui anh DANG FILE de tu doc ten file."
-            )
-            return
-        files.append((message.photo[-1].file_id, "image/jpeg", context.args[0].strip()))
-
-    else:
-        await message.reply_text(
-            "Cach dung:\n"
-            "1. Gui NHIEU FILE anh (ten file = sub_id) + caption /hook\n"
-            "2. Gui 1 anh thuong + caption /hook <sub_id>\n\n"
-            "Vi du ten file: aocoyem3.jpg, setvaycadigan1.png"
-        )
-        return
-
-    total = len(files)
-    processing = await message.reply_text("Dang xu ly %d anh... 0/%d" % (total, total))
-
-    results = []
-    for idx, (file_id, mime_hint, sub_id) in enumerate(files, 1):
-        try:
-            await context.bot.send_chat_action(chat_id=message.chat_id, action="typing")
-            hook, saved = await _process_single_hook(context, file_id, mime_hint, sub_id)
-            status = "Da luu vao sheet" if saved else "sub_id khong tim thay trong sheet"
-            results.append("✅ [%s] %s\n%s" % (sub_id, status, hook))
-        except Exception as e:
-            results.append("❌ [%s] Loi: %s" % (sub_id, str(e)[:200]))
-        # Cap nhat tien trinh
-        await processing.edit_text("Dang xu ly %d anh... %d/%d" % (total, idx, total))
-
-    await processing.edit_text(
-        "Xong! %d/%d anh:\n\n%s" % (total, total, "\n\n".join(results))
-    )
 
 
 async def post_fb_command(update, context):
@@ -701,7 +471,7 @@ async def canceljob_command(update, context):
         await update.message.reply_text("Khong tim thay job [%s]." % sub_id)
 
 
-# — Shop Lists cố định (Option B) ——————————————————————————————
+# ── Shop Lists cố định (Option B) ────────────────────────────────────────────
 SHOP_LISTS = {
     "list1": {
         "title": "VÀI BRAND ĐỒ SIÊU XINH MÀ MÌNH MÊ 🎀",
@@ -840,143 +610,18 @@ async def caption_command(update, context):
     await message.reply_text(caption, disable_web_page_preview=True)
 
 
-# ── Telethon: đọc webpage preview từ Telegram ────────────────────────────────
-import asyncio
-from telethon import TelegramClient, events
-from telethon.tl.types import MessageMediaWebPage, WebPage, WebPageEmpty
-
-_telethon_client = None
-
-async def start_telethon(bot_app):
-    """Khoi dong Telethon client song song voi bot."""
-    global _telethon_client
-    try:
-        try:
-            api_id   = int(os.environ.get("TELEGRAM_API_ID", "0"))
-            api_hash = os.environ.get("TELEGRAM_API_HASH", "")
-        except:
-            import config as cfg
-            api_id   = cfg.TELEGRAM_API_ID
-            api_hash = cfg.TELEGRAM_API_HASH
-
-        if not api_id or not api_hash:
-            logger.warning("Telethon: Chua co API_ID/API_HASH, bo qua.")
-            return
-
-        _telethon_client = TelegramClient("linkbot", api_id, api_hash)
-        await _telethon_client.start()
-        me = await _telethon_client.get_me()
-        logger.info("Telethon client started OK - logged in as: %s @%s", me.first_name, me.username)
-        # Log tat ca dialogs
-        async for dialog in _telethon_client.iter_dialogs():
-            logger.info("Telethon dialog: %s (id=%s)", dialog.name, dialog.id)
-
-        async def process_webpage(chat_id, msg_id, url):
-            """Cho preview load xong roi doc title."""
-            logger.info("Telethon process_webpage start: %s", url)
-            for attempt in range(5):
-                await asyncio.sleep(3)
-                try:
-                    msg = await _telethon_client.get_messages(chat_id, ids=msg_id)
-                    if not msg or not msg.media:
-                        continue
-                    if not isinstance(msg.media, MessageMediaWebPage):
-                        continue
-                    webpage = msg.media.webpage
-                    if not webpage or isinstance(webpage, WebPageEmpty):
-                        continue
-                    if not hasattr(webpage, "title") or not webpage.title:
-                        continue
-
-                    title = webpage.title.strip()
-                    title = re.split(r"\s*[|\-]\s*[Ss]hopee", title)[0].strip()
-                    if not title:
-                        continue
-
-                    logger.info("Telethon got title (attempt %d): %r", attempt+1, title)
-
-                    # Cap nhat sheet Links
-                    creds_dict = json.loads(GOOGLE_CREDENTIALS_JSON)
-                    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-                    client_gs = gspread.authorize(creds)
-                    spreadsheet = client_gs.open_by_key(SPREADSHEET_ID)
-                    sheet = spreadsheet.worksheet("Links")
-                    all_rows = sheet.get_all_values()
-                    for i, row in enumerate(all_rows[1:], start=2):
-                        if len(row) > 1 and row[1].strip() == url.strip():
-                            sheet.update_cell(i, 5, title)
-                            logger.info("Cap nhat title cho row %d: %s", i, title)
-                            return
-                    logger.info("Khong tim thay URL trong sheet: %s", url)
-                    return
-                except Exception as e:
-                    logger.warning("Telethon attempt %d error: %s", attempt+1, e)
-            logger.info("Telethon: Khong lay duoc title sau 5 lan thu")
-
-        @_telethon_client.on(events.NewMessage)
-        async def on_message(event):
-            """Doc webpage title khi co link duoc gui."""
-            msg = event.message
-            if not msg or not msg.text:
-                return
-
-            text = msg.text.strip()
-            if not text.startswith("/link"):
-                return
-
-            parts = text.split()
-            if len(parts) < 2:
-                return
-            url = parts[1].strip()
-            if not url.startswith("http"):
-                return
-
-            logger.info("Telethon: Nhan /link url=%s msg_id=%s", url, msg.id)
-            await process_webpage(event.chat_id, msg.id, url)
-
-
-        logger.info("Telethon dang lang nghe tin nhan...")
-        await _telethon_client.run_until_disconnected()
-
-    except Exception as e:
-        logger.error("Telethon error: %s", e)
-
-
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Khoi dong APScheduler
-    scheduler = AsyncIOScheduler(timezone="Asia/Ho_Chi_Minh")
-    scheduler.start()
-    app.bot_data["scheduler"] = scheduler
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("link", link_command))
     app.add_handler(CommandHandler("recent", recent_command))
     app.add_handler(CommandHandler("count", count_command))
     app.add_handler(CommandHandler("custom", custom_command))
-    app.add_handler(CommandHandler("hook", hook_command))
     app.add_handler(CommandHandler("caption", caption_command))
-    app.add_handler(CommandHandler("post_fb", post_fb_command))
-    app.add_handler(CommandHandler("confirm_fb", confirm_fb_command))
-    app.add_handler(CommandHandler("listjobs", listjobs_command))
-    app.add_handler(CommandHandler("cancel_fb", canceljob_command))
-    # File anh + caption /hook -> hook_command
-    app.add_handler(MessageHandler(
-        (tg_filters.PHOTO | tg_filters.Document.IMAGE) & tg_filters.Caption(r"^/hook"),
-        hook_command
-    ))
-    # File anh khong co caption bat dau bang "/" -> hook_command (tu doc ten file)
-    app.add_handler(MessageHandler(
-        tg_filters.Document.IMAGE & ~tg_filters.Caption(r"^/"),
-        hook_command
-    ))
     # File anh + caption /post_fb -> post_fb_command
-    app.add_handler(MessageHandler(
-        (tg_filters.PHOTO | tg_filters.Document.IMAGE) & tg_filters.Caption(r"^/post_fb"),
-        post_fb_command
-    ))
     # File + caption /custom -> custom_command
     app.add_handler(MessageHandler(
         tg_filters.Document.ALL & tg_filters.Caption(r"^/custom"),
@@ -984,31 +629,6 @@ def main():
     ))
     logger.info("Bot dang chay...")
 
-    # Kiem tra co Telethon khong
-    try:
-        api_id   = int(os.environ.get("TELEGRAM_API_ID", "0"))
-        api_hash = os.environ.get("TELEGRAM_API_HASH", "")
-    except:
-        api_id, api_hash = 0, ""
-    if not api_id or not api_hash:
-        try:
-            import config as cfg
-            api_id   = getattr(cfg, "TELEGRAM_API_ID", 0)
-            api_hash = getattr(cfg, "TELEGRAM_API_HASH", "")
-        except:
-            api_id, api_hash = 0, ""
-
-    if api_id and api_hash:
-        # Chay Telethon trong thread rieng, bot chay binh thuong
-        import threading
-        def run_telethon():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(start_telethon(app))
-        t = threading.Thread(target=run_telethon, daemon=True)
-        t.start()
-    else:
-        logger.info("Khong co Telethon API_ID/HASH, chay bot don gian.")
 
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
